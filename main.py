@@ -14,7 +14,7 @@ inventory_img = pygame.transform.scale(pygame.image.load("Data/inventory.png").c
 inventory_img_rect = pygame.Rect(875, 350, 400, 400)
 bridge_img = pygame.image.load("Data/bridge.png").convert_alpha()
 bridge_img2 = pygame.image.load("Data/bridge2.png").convert_alpha()
-grass_img = pygame.image.load("Data/grass.png").convert_alpha()
+grass_img = pygame.image.load("Data/grass-1.png").convert_alpha()
 
 b_front = pygame.image.load("Movement/Basic/B_Front.png").convert_alpha()
 b_front_rect = b_front.get_rect(bottomright=(1000, 540))
@@ -31,10 +31,18 @@ dragged_img = None
 dragged_rect = None
 direction = None
 
-flag_img = pygame.image.load("Data/flag.png").convert_alpha()
+flag_img = pygame.transform.scale(pygame.image.load("Data/flag.png").convert_alpha(), (64, 64))
 flag_placed = False
-flag_pos = (130, 210)
+flag_pos = (432, 382)
 flag_rect = flag_img.get_rect(center=flag_pos)
+
+start_and_end_sound = pygame.mixer.Sound("Music/start.wav")
+reach_sound = pygame.mixer.Sound("Music/Reach.wav")
+place_sound = pygame.mixer.Sound("Music/place.wav")
+quit_sound = pygame.mixer.Sound("Music/quit.wav")
+
+level_1_track = pygame.mixer_music.load("Music/Sythum_edited.wav")
+pygame.mixer_music.set_volume(0.5)
 
 class Button():
     def __init__(self, image, pos, text_input, font, base_color, hovering_color):
@@ -102,9 +110,13 @@ def connect_with_bridge(s_rect, direction):
         if bridge_width > 10:
             bridge_surf = pygame.transform.scale(bridge_img2, (bridge_width, grass_img.get_height()))
             bridge_rect = bridge_surf.get_rect(topleft=(left.right, left.y))
+            if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
+                end_screen()
+                reach_sound.play()
+                pygame.mixer_music.stop()
             placed_blocks.append((bridge_surf, bridge_rect))
-            flag_placed = True
-            flag_pos = target_grass.center
+            place_sound.play()
+
     else:
         top = under_grass if under_grass.centery < target_grass.centery else target_grass
         bottom = target_grass if target_grass.centery > under_grass.centery else under_grass
@@ -112,9 +124,12 @@ def connect_with_bridge(s_rect, direction):
         if bridge_height > 10:
             bridge_surf = pygame.transform.scale(bridge_img, (grass_img.get_width(), bridge_height))
             bridge_rect = bridge_surf.get_rect(topleft=(top.x, top.bottom))
+            if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
+                end_screen()    
+                reach_sound.play()
+                pygame.mixer_music.stop()
             placed_blocks.append((bridge_surf, bridge_rect))
-            flag_placed = True
-            flag_pos = target_grass.center
+            place_sound.play()
 
 def load_level():
     placed_blocks.extend([
@@ -125,12 +140,18 @@ def load_level():
         (grass_img, grass_img.get_rect(topleft=(250, 350))),
         (grass_img, grass_img.get_rect(topleft=(400, 350))),
     ])
+    final_grass = placed_blocks[-1][1]
+    global flag_pos, flag_rect
+    flag_pos = final_grass.center
+    flag_rect.center = flag_pos
 
 def play():
     global dragging, dragged_img, dragged_rect, direction, flag_rect
     while True:
+
         cursor_pos = pygame.mouse.get_pos()
         flag_rect.center = flag_pos
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -164,8 +185,7 @@ def play():
                     on_grass = any(img == grass_img and rect.collidepoint(new_rect.center) for img, rect in placed_blocks)
                     if on_grass:
                         connect_with_bridge(new_rect, direction)
-                        if new_rect.colliderect(flag_rect.inflate(10, 10)):
-                            print("Flag Collided!")
+                       
                 dragging = False
                 dragged_img = None
                 dragged_rect = None
@@ -183,7 +203,6 @@ def play():
         if dragging and dragged_img:
             screen.blit(dragged_img, dragged_rect)
         screen.blit(flag_img, flag_rect)
-        pygame.draw.rect(screen, (255,0,0), flag_rect, 2)
         screen.blit(cursor, cursor_pos)
         pygame.display.update()
         clock.tick(60)
@@ -206,7 +225,30 @@ def options():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if OPTIONS_BACK.CheckForInput(OPTIONS_MOUSE_POS):
+                    start_and_end_sound.play()
                     main_menu()
+        pygame.display.update()
+
+def end_screen():
+    while True:
+
+        END_TEXT = get_font(90).render("LEVEL COMPLETE!", True, "black")
+        END_RECT = END_TEXT.get_rect(center=(640, 200))
+        screen.blit(END_TEXT, END_RECT)
+
+        BACK_TO_MENU = Button(image=None, pos=(640, 460), text_input="MENU",
+                              font=get_font(75), base_color="Green", hovering_color="#84FF84")
+        BACK_TO_MENU.ChangeColor(pygame.mouse.get_pos())
+        BACK_TO_MENU.update(screen)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if BACK_TO_MENU.CheckForInput(pygame.mouse.get_pos()):
+                    return
+                
         pygame.display.update()
 
 def main_menu():
@@ -230,10 +272,15 @@ def main_menu():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if PLAY_BUTTON.CheckForInput(MENU_MOUSE_POS):
+                    start_and_end_sound.play()
+                    pygame.mixer_music.play()
                     play()
                 if OPTIONS_BUTTON.CheckForInput(MENU_MOUSE_POS):
+                    start_and_end_sound.play()
                     options()
                 if QUIT_BUTTON.CheckForInput(MENU_MOUSE_POS):
+                    quit_sound.play(100)
+                    pygame.time.wait()
                     pygame.quit()
                     sys.exit()
         pygame.display.update()
