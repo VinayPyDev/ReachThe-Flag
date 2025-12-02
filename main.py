@@ -41,8 +41,15 @@ reach_sound = pygame.mixer.Sound("Music/Reach.wav")
 place_sound = pygame.mixer.Sound("Music/place.wav")
 quit_sound = pygame.mixer.Sound("Music/quit.wav")
 
-level_1_track = pygame.mixer_music.load("Music/Sythum_edited.wav")
-pygame.mixer_music.set_volume(0.5)
+def menu_track():
+    pygame.mixer_music.load("Music/Calm Wind.wav")
+    pygame.mixer_music.set_volume(0.5)
+    pygame.mixer_music.play()
+
+def level_1_track():
+    pygame.mixer_music.load("Music/Sythum_edited.wav")
+    pygame.mixer_music.set_volume(0.5)
+    pygame.mixer_music.play()
 
 class Button():
     def __init__(self, image, pos, text_input, font, base_color, hovering_color):
@@ -111,9 +118,10 @@ def connect_with_bridge(s_rect, direction):
             bridge_surf = pygame.transform.scale(bridge_img2, (bridge_width, grass_img.get_height()))
             bridge_rect = bridge_surf.get_rect(topleft=(left.right, left.y))
             if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
+                pygame.mixer_music.stop()
                 end_screen()
                 reach_sound.play()
-                pygame.mixer_music.stop()
+                return
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
 
@@ -125,11 +133,20 @@ def connect_with_bridge(s_rect, direction):
             bridge_surf = pygame.transform.scale(bridge_img, (grass_img.get_width(), bridge_height))
             bridge_rect = bridge_surf.get_rect(topleft=(top.x, top.bottom))
             if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
+                pygame.mixer_music.stop()
                 end_screen()    
                 reach_sound.play()
-                pygame.mixer_music.stop()
+                return
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
+
+def reset_level():
+    global placed_blocks, dragging, dragged_img, dragged_rect, direction
+    placed_blocks = []
+    dragging = False
+    dragged_img = None
+    dragged_rect = None
+    direction = None
 
 def load_level():
     placed_blocks.extend([
@@ -158,7 +175,7 @@ def play():
                 sys.exit()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return
-            if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.type == pygame.MOUSEBUTTONDOWN: 
                 if b_front_rect.collidepoint(event.pos):
                     dragging = True
                     dragged_img = b_front
@@ -230,13 +247,21 @@ def options():
         pygame.display.update()
 
 def end_screen():
+    end_screen_flag = pygame.transform.scale(flag_img, (100, 100))
+    end_screen_flag_rect = end_screen_flag.get_rect(center=(640, 360))
     while True:
 
-        END_TEXT = get_font(90).render("LEVEL COMPLETE!", True, "black")
-        END_RECT = END_TEXT.get_rect(center=(640, 200))
+        screen.blit(bg, (0, 0))
+        screen.blit(cursor, (pygame.mouse.get_pos()))
+
+        
+        screen.blit(end_screen_flag, end_screen_flag_rect)
+
+        END_TEXT = get_font(75).render("LEVEL COMPLETE!", True, "black")
+        END_RECT = END_TEXT.get_rect(center=(640, 170))
         screen.blit(END_TEXT, END_RECT)
 
-        BACK_TO_MENU = Button(image=None, pos=(640, 460), text_input="MENU",
+        BACK_TO_MENU = Button(image=None, pos=(640, 575), text_input="MENU",
                               font=get_font(75), base_color="Green", hovering_color="#84FF84")
         BACK_TO_MENU.ChangeColor(pygame.mouse.get_pos())
         BACK_TO_MENU.update(screen)
@@ -247,11 +272,17 @@ def end_screen():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if BACK_TO_MENU.CheckForInput(pygame.mouse.get_pos()):
+                    start_and_end_sound.play()
+                    reset_level()
+                    load_level()
+                    main_menu()
                     return
                 
         pygame.display.update()
 
 def main_menu():
+    menu_track()
+
     while True:
         screen.fill((40, 40, 40))
         MENU_MOUSE_POS = pygame.mouse.get_pos()
@@ -272,15 +303,16 @@ def main_menu():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if PLAY_BUTTON.CheckForInput(MENU_MOUSE_POS):
+                    menu_track()
                     start_and_end_sound.play()
-                    pygame.mixer_music.play()
+                    level_1_track()
                     play()
                 if OPTIONS_BUTTON.CheckForInput(MENU_MOUSE_POS):
                     start_and_end_sound.play()
                     options()
                 if QUIT_BUTTON.CheckForInput(MENU_MOUSE_POS):
-                    quit_sound.play(100)
-                    pygame.time.wait()
+                    quit_sound.play()
+                    pygame.time.wait(100)
                     pygame.quit()
                     sys.exit()
         pygame.display.update()
