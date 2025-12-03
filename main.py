@@ -41,14 +41,22 @@ reach_sound = pygame.mixer.Sound("Music/Reach.wav")
 place_sound = pygame.mixer.Sound("Music/place.wav")
 quit_sound = pygame.mixer.Sound("Music/quit.wav")
 
+current_level = 1
+max_level = 2
+
 def menu_track():
     pygame.mixer_music.load("Music/Calm Wind.wav")
-    pygame.mixer_music.set_volume(0.5)
+    pygame.mixer_music.set_volume(0.8)
     pygame.mixer_music.play()
 
 def level_1_track():
     pygame.mixer_music.load("Music/Sythum_edited.wav")
-    pygame.mixer_music.set_volume(0.5)
+    pygame.mixer_music.set_volume(0.4)
+    pygame.mixer_music.play()
+
+def level_2_track():
+    pygame.mixer_music.load("Music/Mocker.wav")
+    pygame.mixer_music.set_volume(0.3)
     pygame.mixer_music.play()
 
 class Button():
@@ -82,7 +90,7 @@ def get_font(size):
     return pygame.font.Font("Font/PixeloidSans-Bold.ttf", size)
 
 def connect_with_bridge(s_rect, direction):
-    global flag_placed, flag_pos
+    global flag_placed, flag_pos, current_level
     under_grass = None
     for img, rect in placed_blocks:
         if img == grass_img and rect.collidepoint(s_rect.center):
@@ -119,11 +127,19 @@ def connect_with_bridge(s_rect, direction):
             bridge_rect = bridge_surf.get_rect(topleft=(left.right, left.y))
             if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
                 pygame.mixer_music.stop()
-                end_screen()
+                reset_level()
+                current_level += 1
+                load_level_2()   
                 reach_sound.play()
                 return
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
+
+        if current_level == 2:
+            load_level_2()
+        else:
+            end_screen()
+        return        
 
     else:
         top = under_grass if under_grass.centery < target_grass.centery else target_grass
@@ -134,11 +150,19 @@ def connect_with_bridge(s_rect, direction):
             bridge_rect = bridge_surf.get_rect(topleft=(top.x, top.bottom))
             if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
                 pygame.mixer_music.stop()
-                end_screen()    
+                reset_level()
+                current_level += 1
+                load_level_2()
                 reach_sound.play()
                 return
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
+
+        if current_level == 2:
+            load_level_2()
+        else:
+            end_screen()
+        return
 
 def reset_level():
     global placed_blocks, dragging, dragged_img, dragged_rect, direction
@@ -148,7 +172,7 @@ def reset_level():
     dragged_rect = None
     direction = None
 
-def load_level():
+def load_level_1():
     placed_blocks.extend([
         (grass_img, grass_img.get_rect(topleft=(100, 200))),
         (grass_img, grass_img.get_rect(topleft=(250, 200))),
@@ -156,6 +180,23 @@ def load_level():
         (grass_img, grass_img.get_rect(topleft=(100, 500))),
         (grass_img, grass_img.get_rect(topleft=(250, 350))),
         (grass_img, grass_img.get_rect(topleft=(400, 350))),
+    ])
+    final_grass = placed_blocks[-1][1]
+    global flag_pos, flag_rect
+    flag_pos = final_grass.center
+    flag_rect.center = flag_pos
+
+def load_level_2():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(650, 250))),
+        (grass_img, grass_img.get_rect(topleft=(500, 250))),
+        (grass_img, grass_img.get_rect(topleft=(350, 250))),
+        (grass_img, grass_img.get_rect(topleft=(200, 250))),
+        (grass_img, grass_img.get_rect(topleft=(650, 400))),
+        (grass_img, grass_img.get_rect(topleft=(650, 550))),
+        (grass_img, grass_img.get_rect(topleft=(350, 550))),
+        (grass_img, grass_img.get_rect(topleft=(500, 550))),
+        (grass_img, grass_img.get_rect(topleft=(200, 550))),
     ])
     final_grass = placed_blocks[-1][1]
     global flag_pos, flag_rect
@@ -274,7 +315,7 @@ def end_screen():
                 if BACK_TO_MENU.CheckForInput(pygame.mouse.get_pos()):
                     start_and_end_sound.play()
                     reset_level()
-                    load_level()
+                    load_level_1()
                     main_menu()
                     return
                 
@@ -317,5 +358,5 @@ def main_menu():
                     sys.exit()
         pygame.display.update()
 
-load_level()
+load_level_1()
 main_menu()
