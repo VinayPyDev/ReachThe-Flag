@@ -36,13 +36,15 @@ flag_placed = False
 flag_pos = (432, 382)
 flag_rect = flag_img.get_rect(center=flag_pos)
 
+final_grass_tile = None
+
 start_and_end_sound = pygame.mixer.Sound("Music/start.wav")
 reach_sound = pygame.mixer.Sound("Music/Reach.wav")
 place_sound = pygame.mixer.Sound("Music/place.wav")
 quit_sound = pygame.mixer.Sound("Music/quit.wav")
 
 current_level = 1
-max_level = 2
+max_level = 8
 
 def menu_track():
     pygame.mixer_music.load("Music/Calm Wind.wav")
@@ -56,7 +58,17 @@ def level_1_track():
 
 def level_2_track():
     pygame.mixer_music.load("Music/Mocker.wav")
-    pygame.mixer_music.set_volume(0.3)
+    pygame.mixer_music.set_volume(0.5)
+    pygame.mixer_music.play()
+
+def level_3_track():
+    pygame.mixer_music.load("Music/Kick 3.mp3")
+    pygame.mixer_music.set_volume(0.5)
+    pygame.mixer_music.play()
+
+def level_4_track():
+    pygame.mixer_music.load("Music/Shining Smiles.mp3")
+    pygame.mixer_music.set_volume(0.5)
     pygame.mixer_music.play()
 
 class Button():
@@ -125,21 +137,11 @@ def connect_with_bridge(s_rect, direction):
         if bridge_width > 10:
             bridge_surf = pygame.transform.scale(bridge_img2, (bridge_width, grass_img.get_height()))
             bridge_rect = bridge_surf.get_rect(topleft=(left.right, left.y))
-            if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
-                pygame.mixer_music.stop()
-                reset_level()
-                current_level += 1
-                load_level_2()   
-                reach_sound.play()
-                return
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
-
-        if current_level == 2:
-            load_level_2()
-        else:
-            end_screen()
-        return        
+            if under_grass == final_grass_tile or target_grass == final_grass_tile:
+                reach_sound.play()
+                next_level()
 
     else:
         top = under_grass if under_grass.centery < target_grass.centery else target_grass
@@ -148,21 +150,11 @@ def connect_with_bridge(s_rect, direction):
         if bridge_height > 10:
             bridge_surf = pygame.transform.scale(bridge_img, (grass_img.get_width(), bridge_height))
             bridge_rect = bridge_surf.get_rect(topleft=(top.x, top.bottom))
-            if target_grass.colliderect(flag_rect) or bridge_rect.colliderect(flag_rect):
-                pygame.mixer_music.stop()
-                reset_level()
-                current_level += 1
-                load_level_2()
-                reach_sound.play()
-                return
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
-
-        if current_level == 2:
-            load_level_2()
-        else:
-            end_screen()
-        return
+            if under_grass == final_grass_tile or target_grass == final_grass_tile:
+                reach_sound.play()
+                next_level()
 
 def reset_level():
     global placed_blocks, dragging, dragged_img, dragged_rect, direction
@@ -181,9 +173,11 @@ def load_level_1():
         (grass_img, grass_img.get_rect(topleft=(250, 350))),
         (grass_img, grass_img.get_rect(topleft=(400, 350))),
     ])
-    final_grass = placed_blocks[-1][1]
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
     global flag_pos, flag_rect
-    flag_pos = final_grass.center
+    flag_pos = final_grass_tile.center
     flag_rect.center = flag_pos
 
 def load_level_2():
@@ -198,9 +192,176 @@ def load_level_2():
         (grass_img, grass_img.get_rect(topleft=(500, 550))),
         (grass_img, grass_img.get_rect(topleft=(200, 550))),
     ])
-    final_grass = placed_blocks[-1][1]
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
     global flag_pos, flag_rect
-    flag_pos = final_grass.center
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_3():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(200, 250))),
+        (grass_img, grass_img.get_rect(topleft=(350, 250))),
+        (grass_img, grass_img.get_rect(topleft=(500, 250))),
+        (grass_img, grass_img.get_rect(topleft=(500, 400))),
+        (grass_img, grass_img.get_rect(topleft=(500, 550))),
+        (grass_img, grass_img.get_rect(topleft=(650, 550)))
+    ])
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
+    global flag_pos, flag_rect
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_4():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(700, 250))),
+        (grass_img, grass_img.get_rect(topleft=(550, 250))),
+        (grass_img, grass_img.get_rect(topleft=(400, 250))),       
+        (grass_img, grass_img.get_rect(topleft=(400, 400))),
+        (grass_img, grass_img.get_rect(topleft=(400, 550))),
+        (grass_img, grass_img.get_rect(topleft=(250, 550)))
+    ])
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
+    global flag_pos, flag_rect
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_5():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(200, 550))),
+        (grass_img, grass_img.get_rect(topleft=(200, 400))),
+        (grass_img, grass_img.get_rect(topleft=(200, 250))),
+        (grass_img, grass_img.get_rect(topleft=(350, 250))),
+        (grass_img, grass_img.get_rect(topleft=(500, 250))),
+        (grass_img, grass_img.get_rect(topleft=(500, 400))),
+        (grass_img, grass_img.get_rect(topleft=(500, 550)))
+    ])
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
+    global flag_pos, flag_rect
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_6():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(500, 250))),
+        (grass_img, grass_img.get_rect(topleft=(500, 400))),
+        (grass_img, grass_img.get_rect(topleft=(500, 550))),
+        (grass_img, grass_img.get_rect(topleft=(350, 550))),
+        (grass_img, grass_img.get_rect(topleft=(200, 550))),
+        (grass_img, grass_img.get_rect(topleft=(200, 400))),
+        (grass_img, grass_img.get_rect(topleft=(200, 250)))
+    ])
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
+    global flag_pos, flag_rect
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_7():
+    placed_blocks.extend([
+        (grass_img,grass_img.get_rect(topleft=(50, 50))),
+        (grass_img,grass_img.get_rect(topleft=(50, 200))),
+        (grass_img,grass_img.get_rect(topleft=(50, 350))),
+        (grass_img,grass_img.get_rect(topleft=(50, 500))),
+        (grass_img,grass_img.get_rect(topleft=(200, 500))),
+        (grass_img,grass_img.get_rect(topleft=(350, 500))),
+        (grass_img,grass_img.get_rect(topleft=(500, 500))),
+        (grass_img,grass_img.get_rect(topleft=(650, 500))),
+        (grass_img,grass_img.get_rect(topleft=(650, 350))),
+        (grass_img,grass_img.get_rect(topleft=(650, 200))),
+        (grass_img,grass_img.get_rect(topleft=(650, 50))),
+        (grass_img,grass_img.get_rect(topleft=(500, 50))),
+        (grass_img,grass_img.get_rect(topleft=(350, 50))),
+    ])
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
+    global flag_pos, flag_rect
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_8():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(350, 200))),
+        (grass_img, grass_img.get_rect(topleft=(350, 350))),
+        (grass_img, grass_img.get_rect(topleft=(350, 500))),
+        (grass_img, grass_img.get_rect(topleft=(200, 500))),
+        (grass_img, grass_img.get_rect(topleft=(50, 500))),
+        (grass_img, grass_img.get_rect(topleft=(50, 350))),
+        (grass_img, grass_img.get_rect(topleft=(50, 200))),
+        (grass_img, grass_img.get_rect(topleft=(50, 50)))
+    ])
+    global final_grass_tile
+    final_grass_tile = placed_blocks[-1][1]
+
+    global flag_pos, flag_rect
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def next_level():
+    global current_level
+    current_level += 1
+
+    if current_level > max_level:
+        end_screen()
+        return "END"
+
+    reset_level()
+    load_level(current_level)
+    return "NEXT"
+
+def check_level_completion():
+    global current_level
+
+    for img, rect in placed_blocks:
+        if img != grass_img:    
+            if rect.colliderect(flag_rect):  
+                pygame.mixer_music.stop()
+                reach_sound.play()
+                result = next_level()
+                return result
+    return None
+
+def load_level(level):
+    global placed_blocks, flag_pos, flag_rect
+
+    placed_blocks = []
+
+    if level == 1:
+        load_level_1()
+
+    elif level == 2:
+        load_level_2()
+        level_2_track()   
+
+    elif level == 3:
+        load_level_3()
+        level_3_track()
+
+    elif level == 4:
+        load_level_4()
+        level_4_track()
+
+    elif level == 5:
+        load_level_5()
+
+    elif level == 6:
+        load_level_6()
+
+    elif level == 7:
+        load_level_7()
+
+    elif level == 8:
+        load_level_8()
+    
     flag_rect.center = flag_pos
 
 def play():
@@ -208,7 +369,6 @@ def play():
     while True:
 
         cursor_pos = pygame.mouse.get_pos()
-        flag_rect.center = flag_pos
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -250,16 +410,21 @@ def play():
                 direction = None
             elif event.type == pygame.MOUSEMOTION and dragging:
                 dragged_rect.center = event.pos
+
+        check_level_completion()
+
         screen.blit(bg, (0, 0))
         screen.blit(inventory_img, inventory_img_rect)
         screen.blit(b_front, b_front_rect)
         screen.blit(b_back, b_back_rect)
         screen.blit(b_left, b_left_rect)
         screen.blit(b_right, b_right_rect)
+
         for img, rect in placed_blocks:
             screen.blit(img, rect)
         if dragging and dragged_img:
             screen.blit(dragged_img, dragged_rect)
+
         screen.blit(flag_img, flag_rect)
         screen.blit(cursor, cursor_pos)
         pygame.display.update()
