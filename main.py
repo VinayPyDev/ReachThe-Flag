@@ -9,6 +9,9 @@ pygame.display.set_caption("Reach The Flag")
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
 
+Active = 1
+Inactive = 0
+
 bg = pygame.transform.scale(pygame.image.load("Data/bg3.png").convert_alpha(), (1280, 720))
 cursor = pygame.image.load("Data/cursor3.png").convert_alpha()
 inventory_img = pygame.transform.scale(pygame.image.load("Data/inventory.png").convert_alpha(), (400, 500))
@@ -16,6 +19,19 @@ inventory_img_rect = pygame.Rect(875, 260, 400, 500)
 bridge_img = pygame.image.load("Data/bridge.png").convert_alpha()   
 bridge_img2 = pygame.image.load("Data/bridge2.png").convert_alpha() 
 grass_img = pygame.image.load("Data/grass-1.png").convert_alpha()
+
+Inactive_grass = grass_img.copy()
+Inactive_grass.fill((150, 150, 150), special_flags=pygame.BLEND_RGB_MULT)
+
+def grass_active(block):
+    return len(block) == 3 and block[0] == grass_img
+
+def SetGrassState(rect, add_state):
+    for i, block in enumerate(placed_blocks):
+        if grass_active(block):
+            img, r, state = block
+            if r == rect:
+                placed_blocks[i] = (img, r, add_state)
 
 b_front = pygame.image.load("Movement/Basic/B_Front.png").convert_alpha()
 b_back = pygame.image.load("Movement/Basic/B_Back.png").convert_alpha()
@@ -38,6 +54,17 @@ m_right_2 = pygame.image.load("Movement/Multipliers/M_Right_2.png").convert_alph
 m_right_3 = pygame.image.load("Movement/Multipliers/M_Right_3.png").convert_alpha()
 m_right_4 = pygame.image.load("Movement/Multipliers/M_Right_4.png").convert_alpha()
 
+cw_rotator_25 = pygame.image.load("Movement/Rotators/cw_rotator_25.png").convert_alpha()
+cw_rotator_50 = pygame.image.load("Movement/Rotators/cw_rotator_50.png").convert_alpha()
+cw_rotator_75 = pygame.transform.scale(pygame.image.load("Movement/Rotators/cw_rotator_75.png").convert_alpha(), (64, 64))
+
+replay_btn = pygame.image.load("Data/replay_btn2.png").convert_alpha()
+replay_btn_rect = replay_btn.get_rect(center=(1230, 50))
+
+pause_btn = pygame.image.load("Data/pause_btn.png").convert_alpha()
+pause_btn_rect = pause_btn.get_rect(center=(1080, 50))
+paused = False
+
 placed_blocks = []               
 dragging = False
 direction = None
@@ -54,16 +81,19 @@ flag_rect = flag_img.get_rect(center=flag_pos)
 
 final_grass_tile = None
 
-# sounds
 start_and_end_sound = pygame.mixer.Sound("Music/start.wav")
 reach_sound = pygame.mixer.Sound("Music/Reach.wav")
 place_sound = pygame.mixer.Sound("Music/place.wav")
 quit_sound = pygame.mixer.Sound("Music/quit.wav")
 
 current_level = 1
-max_level = 8
+max_level = 12
 
 ICON_SIZE = 54
+
+TILE = 150
+
+CwRotator = {25: (TILE, TILE), 50: (0, TILE * 2), 75: (-TILE, TILE)}
 
 def stop_level_tracks():
     pygame.mixer.music.stop()
@@ -126,12 +156,15 @@ class Button():
             self.image = self.text
         self.rect = self.image.get_rect(center=(self.x_pos, self.y_pos))
         self.text_rect = self.text.get_rect(center=(self.x_pos, self.y_pos))
+
     def update(self, screen, draw_image=True):
         if draw_image and self.image is not None:
             screen.blit(self.image, self.rect)
         screen.blit(self.text, self.text_rect)
+    
     def CheckForInput(self, position):
         return position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom)
+    
     def ChangeColor(self, position):
         if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
             self.text = self.font.render(self.text_input, True, self.hovering_color)
@@ -186,16 +219,24 @@ def layout_inventory():
 def connect_with_bridge(s_rect, direction):
     global final_grass_tile, current_level
     under_grass = None
-    for img, rect in placed_blocks:
-        if img == grass_img and rect.collidepoint(s_rect.center):
-            under_grass = rect
-            break
+    for block in placed_blocks:
+        if grass_active(block):
+            img, rect, state = block
+            if state == Active and rect.collidepoint(s_rect.center):
+                under_grass = rect
+                break
     if not under_grass:
         return
     target_grass = None
     min_dist = float("inf")
-    for img, rect in placed_blocks:
-        if img == grass_img and rect != under_grass:
+    for block in placed_blocks:
+            if not grass_active(block):
+                continue
+
+            img, rect, state = block
+            if rect == under_grass:
+                continue
+
             dx = rect.centerx - under_grass.centerx
             dy = rect.centery - under_grass.centery
             if direction == "front" and abs(dx) < 20 and dy < -50 and abs(dy) < min_dist:
@@ -224,11 +265,14 @@ def place_bridge_between(under_rect, target_rect):
             bridge_rect = bridge_surf.get_rect(topleft=(left.right, left.y))
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
+            if target_rect and target_rect != under_rect:
+                SetGrassState(under_rect, Inactive)
+                SetGrassState(target_rect, Active)
+
             if left == final_grass_tile or right == final_grass_tile:
                 reach_sound.play()
                 next_level()
     else:
-        # vertical
         top = under_rect if under_rect.centery < target_rect.centery else target_rect
         bottom = target_rect if target_rect.centery > under_rect.centery else under_rect
         bridge_height = bottom.top - top.bottom
@@ -237,6 +281,10 @@ def place_bridge_between(under_rect, target_rect):
             bridge_rect = bridge_surf.get_rect(topleft=(top.x, top.bottom))
             placed_blocks.append((bridge_surf, bridge_rect))
             place_sound.play()
+            if target_rect and target_rect != under_rect:
+                SetGrassState(under_rect, Inactive)
+                SetGrassState(target_rect, Active)
+
             if top == final_grass_tile or bottom == final_grass_tile:
                 reach_sound.play()
                 next_level()
@@ -250,9 +298,14 @@ def place_multiplier_bridges(under_grass_rect, direction, count):
         candidate = None
         best_dist = float("inf")
 
-        for img, rect in placed_blocks:
-            if img != grass_img or rect == start:
+        for block in placed_blocks:
+            if not grass_active(block):
                 continue
+
+            img, rect, state = block
+            if rect == start:
+                continue
+
             dx = rect.centerx - start.centerx
             dy = rect.centery - start.centery
 
@@ -288,6 +341,48 @@ def place_multiplier_bridges(under_grass_rect, direction, count):
 
         start = candidate
 
+def RotateActiveBlock(percentage):
+    global placed_blocks, flag_rect
+
+    new_blocks = []
+
+    for block in placed_blocks:
+        if len(block) == 3:
+            img, rect, state = block
+
+            if state == Active:
+                cx, cy = rect.center
+                x, y = rect.center
+
+                rel_x = x - cx
+                rel_y = y - cy
+
+                if percentage == 25:      
+                    new_x = cx + rel_y
+                    new_y = cy - rel_x
+                elif percentage == 50:    
+                    new_x = cx - rel_x
+                    new_y = cy - rel_y
+                elif percentage == 75:    
+                    new_x = cx - rel_y
+                    new_y = cy + rel_x
+                else:
+                    new_x, new_y = x, y
+
+                new_rect = rect.copy()
+                new_rect.center = (new_x, new_y)
+
+                if rect.colliderect(flag_rect):
+                    flag_rect.center = new_rect.center
+
+                new_blocks.append((img, new_rect, state))
+            else:
+                new_blocks.append(block)
+        else:
+            new_blocks.append(block)
+
+    placed_blocks[:] = new_blocks
+
 def reset_level():
     global placed_blocks, dragging, dragged_img, dragged_rect, direction, selected_item_idx, selected_item_id
     placed_blocks = []
@@ -304,12 +399,12 @@ def reset_level():
 
 def load_level_1():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(100, 200))),
-        (grass_img, grass_img.get_rect(topleft=(250, 200))),
-        (grass_img, grass_img.get_rect(topleft=(100, 350))),
-        (grass_img, grass_img.get_rect(topleft=(100, 500))),
-        (grass_img, grass_img.get_rect(topleft=(250, 350))),
-        (grass_img, grass_img.get_rect(topleft=(400, 350))),
+        (grass_img, grass_img.get_rect(topleft=(100, 200)), Active),
+        (grass_img, grass_img.get_rect(topleft=(250, 200)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(100, 350)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(100, 500)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(250, 350)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(400, 350)), Inactive),
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -318,15 +413,15 @@ def load_level_1():
 
 def load_level_2():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(650, 250))),
-        (grass_img, grass_img.get_rect(topleft=(500, 250))),
-        (grass_img, grass_img.get_rect(topleft=(350, 250))),
-        (grass_img, grass_img.get_rect(topleft=(200, 250))),
-        (grass_img, grass_img.get_rect(topleft=(650, 400))),
-        (grass_img, grass_img.get_rect(topleft=(650, 550))),
-        (grass_img, grass_img.get_rect(topleft=(350, 550))),
-        (grass_img, grass_img.get_rect(topleft=(500, 550))),
-        (grass_img, grass_img.get_rect(topleft=(200, 550))),
+        (grass_img, grass_img.get_rect(topleft=(200, 250)), Active),
+        (grass_img, grass_img.get_rect(topleft=(500, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(350, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(350, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 550)), Inactive),
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -335,12 +430,12 @@ def load_level_2():
 
 def load_level_3():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(200, 250))),
-        (grass_img, grass_img.get_rect(topleft=(350, 250))),
-        (grass_img, grass_img.get_rect(topleft=(500, 250))),
-        (grass_img, grass_img.get_rect(topleft=(500, 400))),
-        (grass_img, grass_img.get_rect(topleft=(500, 550))),
-        (grass_img, grass_img.get_rect(topleft=(650, 550)))
+        (grass_img, grass_img.get_rect(topleft=(200, 250)), Active),
+        (grass_img, grass_img.get_rect(topleft=(350, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 550)), Inactive)
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -349,12 +444,12 @@ def load_level_3():
 
 def load_level_4():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(700, 250))),
-        (grass_img, grass_img.get_rect(topleft=(550, 250))),
-        (grass_img, grass_img.get_rect(topleft=(400, 250))),
-        (grass_img, grass_img.get_rect(topleft=(400, 400))),
-        (grass_img, grass_img.get_rect(topleft=(400, 550))),
-        (grass_img, grass_img.get_rect(topleft=(250, 550)))
+        (grass_img, grass_img.get_rect(topleft=(700, 250)), Active),
+        (grass_img, grass_img.get_rect(topleft=(550, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(400, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(400, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(400, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(250, 550)), Inactive)
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -363,13 +458,13 @@ def load_level_4():
 
 def load_level_5():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(200, 550))),
-        (grass_img, grass_img.get_rect(topleft=(200, 400))),
-        (grass_img, grass_img.get_rect(topleft=(200, 250))),
-        (grass_img, grass_img.get_rect(topleft=(350, 250))),
-        (grass_img, grass_img.get_rect(topleft=(500, 250))),
-        (grass_img, grass_img.get_rect(topleft=(500, 400))),
-        (grass_img, grass_img.get_rect(topleft=(500, 550)))
+        (grass_img, grass_img.get_rect(topleft=(200, 550)), Active),
+        (grass_img, grass_img.get_rect(topleft=(200, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(350, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 550)), Inactive)
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -378,13 +473,13 @@ def load_level_5():
 
 def load_level_6():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(500, 250))),
-        (grass_img, grass_img.get_rect(topleft=(500, 400))),
-        (grass_img, grass_img.get_rect(topleft=(500, 550))),
-        (grass_img, grass_img.get_rect(topleft=(350, 550))),
-        (grass_img, grass_img.get_rect(topleft=(200, 550))),
-        (grass_img, grass_img.get_rect(topleft=(200, 400))),
-        (grass_img, grass_img.get_rect(topleft=(200, 250)))
+        (grass_img, grass_img.get_rect(topleft=(500, 250)), Active),
+        (grass_img, grass_img.get_rect(topleft=(500, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(350, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 550)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 250)), Inactive)
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -393,19 +488,19 @@ def load_level_6():
 
 def load_level_7():
     placed_blocks.extend([
-        (grass_img,grass_img.get_rect(topleft=(50, 50))),
-        (grass_img,grass_img.get_rect(topleft=(50, 200))),
-        (grass_img,grass_img.get_rect(topleft=(50, 350))),
-        (grass_img,grass_img.get_rect(topleft=(50, 500))),
-        (grass_img,grass_img.get_rect(topleft=(200, 500))),
-        (grass_img,grass_img.get_rect(topleft=(350, 500))),
-        (grass_img,grass_img.get_rect(topleft=(500, 500))),
-        (grass_img,grass_img.get_rect(topleft=(650, 500))),
-        (grass_img,grass_img.get_rect(topleft=(650, 350))),
-        (grass_img,grass_img.get_rect(topleft=(650, 200))),
-        (grass_img,grass_img.get_rect(topleft=(650, 50))),
-        (grass_img,grass_img.get_rect(topleft=(500, 50))),
-        (grass_img,grass_img.get_rect(topleft=(350, 50))),
+        (grass_img,grass_img.get_rect(topleft=(50, 50)), Active),
+        (grass_img,grass_img.get_rect(topleft=(50, 200)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(50, 350)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(50, 500)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(200, 500)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(350, 500)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(500, 500)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(650, 500)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(650, 350)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(650, 200)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(650, 50)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(500, 50)), Inactive),
+        (grass_img,grass_img.get_rect(topleft=(350, 50)), Inactive),
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -414,14 +509,64 @@ def load_level_7():
 
 def load_level_8():
     placed_blocks.extend([
-        (grass_img, grass_img.get_rect(topleft=(350, 200))),
-        (grass_img, grass_img.get_rect(topleft=(350, 350))),
-        (grass_img, grass_img.get_rect(topleft=(350, 500))),
-        (grass_img, grass_img.get_rect(topleft=(200, 500))),
-        (grass_img, grass_img.get_rect(topleft=(50, 500))),
-        (grass_img, grass_img.get_rect(topleft=(50, 350))),
-        (grass_img, grass_img.get_rect(topleft=(50, 200))),
-        (grass_img, grass_img.get_rect(topleft=(50, 50)))
+        (grass_img, grass_img.get_rect(topleft=(350, 200)), Active),
+        (grass_img, grass_img.get_rect(topleft=(350, 350)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(350, 500)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 500)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 500)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 350)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 200)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 50)), Inactive)
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_9():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(350, 50)), Active),
+        (grass_img, grass_img.get_rect(topleft=(350, 150)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 300)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 300)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 450)), Inactive)    
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_10():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(200, 150)), Active),
+        (grass_img, grass_img.get_rect(topleft=(200, 600)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 600)), Inactive)
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos    
+
+def load_level_11():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(450, 150)), Active),
+        (grass_img, grass_img.get_rect(topleft=(300, 300)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(150, 300)), Inactive)
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_12():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(50, 150)), Active),
+        (grass_img, grass_img.get_rect(topleft=(50, 300)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(350, 300)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 300)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 500)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(650, 500)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(800, 500)), Inactive),
     ])
     global final_grass_tile, flag_pos, flag_rect
     final_grass_tile = placed_blocks[-1][1]
@@ -443,8 +588,9 @@ def next_level():
 
 def check_level_completion():
     global current_level
-    for img, rect in placed_blocks:
-        if img != grass_img:
+    for block in placed_blocks:
+        if len(block) == 2:
+            img, rect = block
             if rect.colliderect(flag_rect):
                 pygame.mixer.music.stop()
                 reach_sound.play()
@@ -468,6 +614,22 @@ def Inventory_system(level):
         add_item("left", b_left)
         add_item("right", b_right)
 
+        add_item("front2", m_front_2)
+        add_item("front3", m_front_3)
+        add_item("front4", m_front_4)
+
+        add_item("back2", m_back_2)
+        add_item("back3", m_back_3)
+        add_item("back4", m_back_4)
+
+        add_item("left2", m_left_2)
+        add_item("left3", m_left_3)
+        add_item("left4", m_left_4)
+
+        add_item("right2", m_right_2)
+        add_item("right3", m_right_3)
+        add_item("right4", m_right_4)
+
     elif 5 <= level <= 8:
         add_item("front2", m_front_2)
         add_item("front3", m_front_3)
@@ -484,6 +646,26 @@ def Inventory_system(level):
         add_item("right2", m_right_2)
         add_item("right3", m_right_3)
         add_item("right4", m_right_4)
+    
+    elif level == 9:
+        add_item("rot_cw_25", cw_rotator_25)
+        add_item("back", b_back)
+        add_item("right", b_right)
+        add_item("left", b_left)
+
+    elif level == 10:
+        add_item("rot_cw_50", cw_rotator_50)
+        add_item("left", b_left)
+
+    elif level == 11:
+        add_item("rot_cw_75", cw_rotator_75)
+        add_item("left", b_left)
+
+    elif level == 12:
+        add_item("rot_cw_50", cw_rotator_50)
+        add_item("rot_cw_25", cw_rotator_25)
+        add_item("right2", m_right_2)
+        add_item("back3", m_back_3)
 
     layout_inventory()
 
@@ -518,6 +700,18 @@ def load_level(level):
     elif level == 8:
         load_level_8()
         level_8_track()
+    elif level == 9:
+        load_level_9()
+
+    elif level == 10:
+        load_level_10()
+
+    elif level == 11:
+        load_level_11()
+
+    elif level == 12:
+        load_level_12()
+
 
     flag_rect.center = flag_pos
 
@@ -568,12 +762,26 @@ def play():
                 if dragging and 'dragged_img' in globals() and selected_item_id is not None:
                     new_rect = globals()['dragged_img'].get_rect(center=event.pos)
                     under_grass = None
-                    for img, rect in placed_blocks:
-                        if img == grass_img and rect.collidepoint(new_rect.center):
-                            under_grass = rect
-                            break
+                    for block in placed_blocks:
+                        if grass_active(block):
+                            img, rect, state = block
+                            if state == Active and rect.collidepoint(new_rect.center):
+                                under_grass = rect
+                                break
 
-                    if under_grass and direction:
+                    if selected_item_id.startswith("rot"):
+                        try:
+                            percentage = int(''.join(ch for ch in selected_item_id if ch.isdigit()))
+                        except:
+                            percentage = None
+                        if percentage is not None:
+                            RotateActiveBlock(percentage)
+
+                            if selected_item_idx is not None and 0 <= selected_item_idx < len(current_inventory):
+                                current_inventory.pop(selected_item_idx)
+                                layout_inventory()
+                    
+                    elif under_grass and direction:
                         num = None
                         try:
                             num = int(''.join(ch for ch in selected_item_id if ch.isdigit()))
@@ -586,7 +794,8 @@ def play():
                                 current_inventory.pop(selected_item_idx)
                                 layout_inventory()
                         else:
-                            connect_with_bridge(new_rect, direction)
+                            connect_with_bridge(new_rect, direction)  
+
                 dragging = False
                 if 'dragged_img' in globals():
                     del globals()['dragged_img']
@@ -600,18 +809,37 @@ def play():
                 if 'dragged_rect' in globals():
                     globals()['dragged_rect'].center = event.pos
 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if replay_btn_rect.collidepoint(event.pos):
+                    reset_level()
+                    load_level(current_level)
+
         check_level_completion()
 
         screen.blit(bg, (0, 0))
         screen.blit(inventory_img, inventory_img_rect)
 
+        level_text = get_font(64).render(f"Level {current_level}", True, "#161616")
+        screen.blit(level_text, (10, 0))        
+
+        screen.blit(replay_btn, replay_btn_rect)
+
         for idx, (item_id, surf) in enumerate(current_inventory):
             if idx < len(inventory_item_rects):
                 rect = inventory_item_rects[idx]
                 screen.blit(surf, rect)
-                
-        for img, rect in placed_blocks:
-            screen.blit(img, rect)
+
+        for block in placed_blocks:
+            if grass_active(block):
+                img, rect, state = block
+                if state == Active:
+                    screen.blit(grass_img, rect)
+                else:
+                    screen.blit(Inactive_grass, rect)
+
+            else:
+                img, rect = block
+                screen.blit(img, rect)
 
         if dragging and 'dragged_img' in globals() and 'dragged_rect' in globals():
             screen.blit(globals()['dragged_img'], globals()['dragged_rect'])
