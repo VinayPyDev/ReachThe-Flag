@@ -28,12 +28,12 @@ Inactive_grass.fill((150, 150, 150), special_flags=pygame.BLEND_RGB_MULT)
 Inactive_dry = dry_img.copy()
 Inactive_dry.fill((82, 18, 0), special_flags=pygame.BLEND_RGB_MULT)
 
-water_supplier_u = pygame.image.load("Data/water_dropper_u").convert_alpha()
-water_supplier_d = pygame.image.load("Data/water_dropper_d").convert_alpha()
-water_supplier_r = pygame.image.load("Data/water_dropper_r").convert_alpha()
-water_supplier_l = pygame.image.load("Data/water_dropper_l").convert_alpha()
+water_supplier_u = pygame.transform.scale(pygame.image.load("Movement/Water Suppliers/water_dropper_u.png").convert_alpha(), (64, 64))
+water_supplier_d = pygame.transform.scale(pygame.image.load("Movement/Water Suppliers/water_dropper_d.png").convert_alpha(), (64, 64))
+water_supplier_r = pygame.transform.scale(pygame.image.load("Movement/Water Suppliers/water_dropper_r.png").convert_alpha(), (64, 64))
+water_supplier_l = pygame.transform.scale(pygame.image.load("Movement/Water Suppliers/water_dropper_l.png").convert_alpha(), (64, 64))
 
-water_sprinker_img = pygame.image.load("Data/water_sprinker.png").convert_alpha()
+water_sprinker_img = pygame.transform.scale(pygame.image.load("Movement/Water Suppliers/water_sprinkler.png").convert_alpha(), (64, 64))
 
 block_state_hy = "hydrated"
 block_state_dhy = "dehydrated"
@@ -93,6 +93,11 @@ pause_btn_rect = pause_btn.get_rect(center=(1080, 50))
 paused = False
 paused_menu = pygame.transform.scale(pygame.image.load("Data/paused_menu.png").convert_alpha(), (700, 700))
 
+helper_btn = pygame.transform.scale(pygame.image.load("Data/helper_btn.png").convert_alpha(), (100, 100))
+helper_btn_rect = helper_btn.get_rect(center=(930, 50))
+helper_menu = pygame.transform.scale(pygame.image.load("Data/help_menu.png").convert_alpha(), (700, 700))
+in_help_menu = False
+
 placed_blocks = []               
 dragging = False
 direction = None
@@ -114,8 +119,8 @@ reach_sound = pygame.mixer.Sound("Music/Reach.wav")
 place_sound = pygame.mixer.Sound("Music/place.wav")
 quit_sound = pygame.mixer.Sound("Music/quit.wav")
 
-current_level = 1
-max_level = 12
+current_level = 13
+max_level = 16
 
 ICON_SIZE = 54
 
@@ -132,21 +137,21 @@ def simulate_water_particles(source_rect, facing):
     
     if facing == "up":
         x = source_rect.centerx
-        y = random.randint(source_rect.top - 100, source_rect.top)
+        y = random.randint(source_rect.top - 400, source_rect.top)
         dx = random.uniform(-1.5, 1.5)
         dy = random.uniform(-1.5, -0.5)
     elif facing == "down":
         x = source_rect.centerx
-        y = random.randint(source_rect.bottom, source_rect.bottom + 100)
+        y = random.randint(source_rect.bottom, source_rect.bottom + 400)
         dx = random.uniform(-1.5, 1.5)
         dy = random.uniform(0.5, 1.5)
     elif facing == "left":
-        x = random.randint(source_rect.left - 100, source_rect.left)
+        x = random.randint(source_rect.left - 400, source_rect.left)
         y = source_rect.centery
         dx = random.uniform(-1.5, -0.5)
         dy = random.uniform(-1.5, 1.5)
     elif facing == "right":
-        x = random.randint(source_rect.right, source_rect.right + 100)
+        x = random.randint(source_rect.right, source_rect.right + 400)
         y = source_rect.centery
         dx = random.uniform(0.5, 1.5)
         dy = random.uniform(-1.5, 1.5)
@@ -157,16 +162,16 @@ def simulate_water_particles(source_rect, facing):
 def draw_supplier_stream(source_rect, facing):
     if facing == "up":
         start = source_rect.midtop
-        end = (source_rect.centerx, source_rect.top - 100)
+        end = spray_stream(source_rect, facing)
     elif facing == "down":
         start = source_rect.midbottom
-        end = (source_rect.centerx, source_rect.bottom + 100)
+        end = spray_stream(source_rect, facing)
     elif facing == "left":
         start = source_rect.midleft
-        end = (source_rect.left - 100, source_rect.centery)
+        end = spray_stream(source_rect, facing)
     elif facing == "right":
         start = source_rect.midright
-        end = (source_rect.right + 100, source_rect.centery)
+        end = spray_stream(source_rect, facing)
 
     pygame.draw.line(screen, (0, 100, 255), start, end, 20)
 
@@ -248,6 +253,26 @@ def level_12_track():
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
 
+def level_13_track():
+    pygame.mixer.music.load("3")
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
+
+def level_14_track():
+    pygame.mixer.music.load("")
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
+
+def level_15_track():
+    pygame.mixer.music.load("")
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
+
+def level_16_track():
+    pygame.mixer.music.load("")
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(-1)
+
 class Button():
     def __init__(self, image, pos, text_input, font, base_color, hovering_color):
         self.image = image
@@ -283,6 +308,13 @@ paused_menu_text = get_font(45).render("R for RESUME", True, (0, 222, 0))
 paused_menu_text_rect = paused_menu_text.get_rect(center=(600, 300))
 paused_menu_text_2 = get_font(45).render("ESC for QUIT", True, (0, 222, 0))
 paused_menu_text_2_rect = paused_menu_text_2.get_rect(center=(600, 500))
+
+helper_menu_texts = ""
+helper_menu_texts_2 = ""
+helper_menu_texts_3 = ""
+# helper_menu_texts_rect = helper_menu_texts.get_rect(center=(300, 300))
+helper_menu_ex_text = get_font(45).render("Esc for Exit", True, (0, 222, 0))
+helper_menu_ex_text_rect = helper_menu_ex_text.get_rect(center=(600, 500))
 
 def layout_inventory():
     global inventory_item_rects
@@ -373,7 +405,7 @@ def place_bridge_between(under_rect, target_rect):
         if bridge_width > 10:
             bridge_surf = pygame.transform.scale(bridge_img2, (bridge_width, grass_img.get_height()))
             bridge_rect = bridge_surf.get_rect(topleft=(left.right, left.y))
-            placed_blocks.append((bridge_surf, bridge_rect))
+            placed_blocks.append((bridge_surf, bridge_rect, None))
             place_sound.play()
             if target_rect and target_rect != under_rect:
                 SetGrassState(under_rect, Inactive)
@@ -389,7 +421,7 @@ def place_bridge_between(under_rect, target_rect):
         if bridge_height > 10:
             bridge_surf = pygame.transform.scale(bridge_img, (grass_img.get_width(), bridge_height))
             bridge_rect = bridge_surf.get_rect(topleft=(top.x, top.bottom))
-            placed_blocks.append((bridge_surf, bridge_rect))
+            placed_blocks.append((bridge_surf, bridge_rect, None))
             place_sound.play()
             if target_rect and target_rect != under_rect:
                 SetGrassState(under_rect, Inactive)
@@ -485,33 +517,64 @@ def spray_stream(source_rect, facing):
 
     target_sprinkler = None
     near_dist = float("inf")
-    tolerance = 40
+    tolerance = 60
     ox, oy = offsets[facing]
 
-    for i, block in enumerate(placed_blocks):
-        if len(block) == 3 and block[2] == "sprinkler":
-            img, rect, kind = block
-            dx = rect.centerx - source_rect.centerx
-            dy = rect.centery - source_rect.centery
-            if facing == "up" and dy < -10 and abs(dx) < tolerance: d = abs(dy)
-            elif facing == "down" and dy > 10 and abs(dx) < tolerance: d = dy
-            elif facing == "left" and dx < -10 and abs(dy) < tolerance: d = abs(dx)
-            elif facing == "right" and dx > 10 and abs(dy) < tolerance: d = dx
-            else: continue
-            if d < near_dist:
-                near_dist = d
-                target_sprinkler = rect
-        
-    if not target_sprinkler:
-        return
+    if facing == "up": 
+        stream_end = (source_rect.centerx, source_rect.top - 500)
+    elif facing == "down":
+        stream_end = (source_rect.centerx, source_rect.bottom + 500)
+    elif facing == "left":
+        stream_end = (source_rect.left - 500, source_rect.centery)
+    elif facing == "right":
+        stream_end = (source_rect.right + 500, source_rect.centery)
+
+    nearest_sprinkler = None
+    nearest_dist = float("inf")
+
+    for block in placed_blocks:
+        if len(block) != 3 or block[0] != water_sprinker_img:
+            continue
+        img, rect, state = block
+        dx = rect.centerx - source_rect.centerx
+        dy = rect.centery - source_rect.centery
+        in_path = (
+            (facing=="up" and dy < -10 and abs(dx) < tolerance) or
+            (facing=="down" and dy > 10 and abs(dx) < tolerance) or
+            (facing=="left" and dx < -10 and abs(dy) < tolerance) or
+            (facing=="right" and dx > 10 and abs(dy) < tolerance) 
+        )
+        if in_path:
+            dist = abs(dy) if facing in ["up", "down"] else abs(dx)
+            if dist < nearest_dist:
+                nearest_dist = dist
+                nearest_sprinkler = rect
+
+    if nearest_sprinkler:
+        if facing == "up":
+            final_end = (nearest_sprinkler.centerx, nearest_sprinkler.bottom)
+        elif facing == "down":
+            final_end = (nearest_sprinkler.centerx, nearest_sprinkler.top)
+        elif facing == "left":
+            final_end = (nearest_sprinkler.right, nearest_sprinkler.centery)
+        elif facing == "right":
+            final_end = (nearest_sprinkler.left, nearest_sprinkler.centery)
+    else:
+        final_end = stream_end
+
+    if not nearest_sprinkler:
+        return stream_end
     
     for i, block in enumerate(placed_blocks):
-        if dry_active(block):
-            img, rect, state = block
-            dx = abs(rect.centerx - target_sprinkler.centerx)
-            dy = abs(rect.centery - target_sprinkler.centery)
-            if (dx < tolerance and dy > 10) or (dy < tolerance and dx > 10):
-                placed_blocks[i] = (grass_img, rect, Active)
+        if not dry_active(block):
+            continue
+        img, rect, state = block
+        dx = abs(rect.centerx - nearest_sprinkler.centerx)
+        dy = abs(rect.centery - nearest_sprinkler.centery)
+        if dx <= TILE + 10 and dy <= TILE + 10:
+            placed_blocks[i] = (grass_img, rect, Active)
+
+    return final_end
 
 def reset_level():
     global placed_blocks, dragging, dragged_img, dragged_rect, direction, selected_item_idx, selected_item_id
@@ -703,6 +766,72 @@ def load_level_12():
     flag_pos = final_grass_tile.center
     flag_rect.center = flag_pos
 
+def load_level_13():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(100, 650)), Active),
+        (grass_img, grass_img.get_rect(topleft=(100, 250)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(100, 250)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(250, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 250)), Inactive),
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_14():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(100, 250)), Active),
+        (grass_img, grass_img.get_rect(topleft=(400, 250)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(400, 250)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(400, 400)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(250, 400)), Inactive),
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_15():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(650, 250)), Active),
+        (grass_img, grass_img.get_rect(topleft=(250, 250)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(250, 250)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(100, 250)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(100, 650)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(100, 650)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(250, 650)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(400, 650)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(550, 650)), Inactive),
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
+def load_level_16():
+    placed_blocks.extend([
+        (grass_img, grass_img.get_rect(topleft=(50, 650)), Active),
+        (grass_img, grass_img.get_rect(topleft=(350, 650)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(350, 650)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(500, 650)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(500, 50)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(500, 50)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(350, 50)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(200, 50)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(200, 50)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(200, 50)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(50, 50)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 200)), Inactive),
+        (water_sprinker_img, water_sprinker_img.get_rect(topleft=(50, 200)), Inactive),
+        (dry_img, dry_img.get_rect(topleft=(50, 350)), Inactive),
+        (grass_img, grass_img.get_rect(topleft=(50, 500)), Inactive),
+    ])
+    global final_grass_tile, flag_pos, flag_rect
+    final_grass_tile = placed_blocks[-1][1]
+    flag_pos = final_grass_tile.center
+    flag_rect.center = flag_pos
+
 def next_level():
     global current_level
     current_level += 1
@@ -766,16 +895,13 @@ def Inventory_system(level):
         add_item("back", b_back)
         add_item("right", b_right)
         add_item("left", b_left)
-
     elif level == 10:
         add_item("rot_cw_50", cw_rotator_50)
         add_item("left", b_left)
         add_item("back", b_back)
-
     elif level == 11:
         add_item("rot_cw_75", cw_rotator_75)
         add_item("left", b_left)
-
     elif level == 12:
         add_item("rot_cw_50", cw_rotator_50)
         add_item("rot_cw_25", cw_rotator_25)
@@ -785,8 +911,45 @@ def Inventory_system(level):
         add_item("back", b_back)
         add_item("left", b_left)
         add_item("right", b_right)
+
+    elif level == 13:
+        add_item("supplierU", water_supplier_u)
+        add_item("right", b_right)
+    elif level == 14:
+        add_item("supplierR", water_supplier_r)
+        add_item("left", b_left)
+        add_item("back", b_back)
+    elif level == 15:
+        add_item("supplierL", water_supplier_l)
+        add_item("supplierD", water_supplier_d)
+        add_item("right2", m_right_2)
+    elif level == 16:
+        add_item("supplierR", water_supplier_r)
+        add_item("supplierU", water_supplier_u)
+        add_item("supplierL", water_supplier_l)
+        add_item("supplierD", water_supplier_d)
+        add_item("back", b_back)
         
     layout_inventory()
+
+def load_helper_text_per_level(level):
+    global helper_menu_texts, helper_menu_texts_2, helper_menu_texts_3
+
+    if 1 <= level <= 4:
+        helper_menu_texts = get_font(45).render("Put the tiles ", True, (0, 222, 0))
+        helper_menu_texts_2 = get_font(45).render("in inventory ", True, (0, 222, 0))
+        helper_menu_texts_3 = get_font(45).render("to move", True, (0, 222, 0))
+    elif 5 <= level <= 8:
+        helper_menu_texts = get_font(45).render("Put the 2, 3", True, (0, 222, 0))
+        helper_menu_texts_2 = get_font(45).render(" and 4 tiles to", True, (0, 222, 0))
+        helper_menu_texts_3 = get_font(45).render(" move much forward", True, (0, 222, 0))
+    elif 9 <= level <= 12:
+        helper_menu_texts = get_font(45).render("Put the buffering", True, (0, 222, 0))
+        helper_menu_texts_2 = get_font(45).render(" like tiles to", True, (0, 222, 0))
+        helper_menu_texts_3 = get_font(45).render(" rotate grass tiles", True, (0, 222, 0))
+    elif 13 <= level <= 16:
+        helper_menu_texts = get_font(45).render("Put the cannon", True, (0, 222, 0))
+        helper_menu_texts_2 = get_font(45).render(" tile to shoot water", True, (0, 222, 0))
 
 def load_level(level):
     global placed_blocks, flag_pos, flag_rect
@@ -831,11 +994,23 @@ def load_level(level):
     elif level == 12:
         load_level_12()
         level_12_track()
+    elif level == 13:
+        load_level_13()
+#leaved spaces are for tracks!!!~
+    elif level == 14:
+        load_level_14()
+
+    elif level == 15:
+        load_level_15()
+
+    elif level == 16:
+        load_level_16()
 
     flag_rect.center = flag_pos
+    load_helper_text_per_level(level)
 
 def play():
-    global dragging, direction, selected_item_idx, selected_item_id, paused
+    global dragging, direction, selected_item_idx, selected_item_id, paused, in_help_menu
 
     while True:
         cursor_pos = pygame.mouse.get_pos()
@@ -859,6 +1034,16 @@ def play():
                 if event.button == 1:
                     if pause_btn_rect.collidepoint(event.pos):
                         paused = True
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    if helper_btn_rect.collidepoint(event.pos):
+                        in_help_menu = True
+#                        pass #change after help menu is drawn~       
+            if event.type == pygame.KEYDOWN:
+                if in_help_menu:
+                    if event.key == pygame.K_ESCAPE:
+                        in_help_menu = False
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 for idx, (item_id, surf) in enumerate(current_inventory):
@@ -914,6 +1099,19 @@ def play():
                             if selected_item_idx is not None and 0 <= selected_item_idx < len(current_inventory):
                                 current_inventory.pop(selected_item_idx)
                                 layout_inventory()
+
+                    elif selected_item_id.startswith("supplier"):
+                        supplier_facing = {"supplierU":"up", "supplierD":"down", "supplierL":"left", "supplierR":"right"}.get(selected_item_id)
+                        supplier_img_map = {"supplierU": water_supplier_u, "supplierD": water_supplier_d, "supplierL": water_supplier_l, "supplierR": water_supplier_r}
+                        if supplier_facing:
+                            s_img = supplier_img_map[selected_item_id]
+                            s_rect = s_img.get_rect(center=event.pos)
+                            placed_blocks.append((s_img, s_rect, supplier_facing))
+                            place_sound.play()
+                            spray_stream(s_rect, supplier_facing)
+                            if selected_item_idx is not None and 0 <= selected_item_idx < len(current_inventory):
+                                current_inventory.pop(selected_item_idx)
+                                layout_inventory()
                     
                     elif under_grass and direction:
                         num = None
@@ -953,16 +1151,29 @@ def play():
         screen.blit(bg, (0, 0))
         screen.blit(inventory_img, inventory_img_rect)
 
-        level_text = get_font(64).render(f"Level {current_level}", True, "#161616")
-        screen.blit(level_text, (10, 0))        
-
         screen.blit(replay_btn, replay_btn_rect)
         screen.blit(pause_btn, pause_btn_rect)
+        screen.blit(helper_btn, helper_btn_rect)
 
         if paused:
             screen.blit(paused_menu, (300, 0))
             screen.blit(paused_menu_text, paused_menu_text_rect)
             screen.blit(paused_menu_text_2, paused_menu_text_2_rect)
+            pygame.display.update()
+            continue
+
+        if in_help_menu:
+            screen.blit(helper_menu, (300, 0))
+            helper_menu_texts_rect = helper_menu_texts.get_rect(center=(100, 300))
+            helper_menu_texts_2_rect = helper_menu_texts_2.get_rect(center=(200, 300))
+            helper_menu_texts_3_rect = helper_menu_texts_3.get_rect(center=(300, 300))
+            screen.blit(helper_menu_texts ,helper_menu_texts_rect)
+            screen.blit(helper_menu_texts_2, helper_menu_texts_2_rect)
+            screen.blit(helper_menu_texts_3, helper_menu_texts_3_rect)
+            
+            screen.blit(helper_menu_ex_text, helper_menu_ex_text_rect)
+#        screen.blit(text_per_menu, ())
+#        screen.blit(text_per_menu, ())
             pygame.display.update()
             continue
 
@@ -972,19 +1183,46 @@ def play():
                 screen.blit(surf, rect)
 
         for block in placed_blocks:
-            if grass_active(block):
-                img, rect, state = block
+            img, rect, state = block
+
+            if img == grass_img:
                 if state == Active:
                     screen.blit(grass_img, rect)
                 else:
                     screen.blit(Inactive_grass, rect)
 
+            elif img == dry_img:
+                if state == Active:
+                    screen.blit(dry_img, rect)
+                else:
+                    screen.blit(Inactive_dry, rect)
+
             else:
-                img, rect = block
                 screen.blit(img, rect)
+
+                supplier_facing_map = {
+                    id(water_supplier_u): "up",
+                    id(water_supplier_d): "down",
+                    id(water_supplier_l): "left",
+                    id(water_supplier_r): "right",
+                }
+                facing = supplier_facing_map.get(id(img))
+                if facing:
+                        on_active_grass = any(
+                        grass_active(b) and b[2] == Active and b[1].colliderect(rect)
+                        for b in placed_blocks
+                        )
+                        if on_active_grass:
+                            draw_supplier_stream(rect, facing)
+                            simulate_water_particles(rect, facing)
+
+        update_and_draw_particles()
 
         if dragging and 'dragged_img' in globals() and 'dragged_rect' in globals():
             screen.blit(globals()['dragged_img'], globals()['dragged_rect'])
+        
+        level_text = get_font(64).render(f"Level {current_level}", True, "#161616")
+        screen.blit(level_text, (10, 0))        
 
         screen.blit(flag_img, flag_rect)
         screen.blit(cursor, cursor_pos)
@@ -1076,9 +1314,9 @@ def main_menu():
                 if PLAY_BUTTON.CheckForInput(MENU_MOUSE_POS):
                     global current_level
                     menu_track()
-                    current_level = 1
+                    current_level = 13
                     start_and_end_sound.play()
-                    load_level(1)
+                    load_level(13)
                     play()
                 if OPTIONS_BUTTON.CheckForInput(MENU_MOUSE_POS):
                     start_and_end_sound.play()
@@ -1090,5 +1328,5 @@ def main_menu():
                     sys.exit()
         pygame.display.update()
 
-load_level(1)
+load_level(13)
 main_menu()
