@@ -114,12 +114,14 @@ flag_rect = flag_img.get_rect(center=flag_pos)
 
 final_grass_tile = None
 
+flag_menu_icon = pygame.image.load("Data/flag_menu.png").convert_alpha()
+
 start_and_end_sound = pygame.mixer.Sound("Music/start.wav")
 reach_sound = pygame.mixer.Sound("Music/Reach.wav")
 place_sound = pygame.mixer.Sound("Music/place.wav")
 quit_sound = pygame.mixer.Sound("Music/quit.wav")
 
-current_level = 13
+current_level = 1
 max_level = 16
 
 ICON_SIZE = 54
@@ -254,22 +256,22 @@ def level_12_track():
     pygame.mixer.music.play(-1)
 
 def level_13_track():
-    pygame.mixer.music.load("3")
+    pygame.mixer.music.load("Music/SUPER1OR.wav")
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
 
 def level_14_track():
-    pygame.mixer.music.load("")
+    pygame.mixer.music.load("Music/AGoNY.wav")
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
 
 def level_15_track():
-    pygame.mixer.music.load("")
+    pygame.mixer.music.load("Music/SUPR3M3.wav")
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
 
 def level_16_track():
-    pygame.mixer.music.load("")
+    pygame.mixer.music.load("Music/D1V1NE.wav")
     pygame.mixer.music.set_volume(0.5)
     pygame.mixer.music.play(-1)
 
@@ -306,15 +308,19 @@ def get_font(size):
 
 paused_menu_text = get_font(45).render("R for RESUME", True, (0, 222, 0))
 paused_menu_text_rect = paused_menu_text.get_rect(center=(600, 300))
-paused_menu_text_2 = get_font(45).render("ESC for QUIT", True, (0, 222, 0))
+paused_menu_text_2 = get_font(45).render("ESC for QUIT", True, (0, 0, 0))
 paused_menu_text_2_rect = paused_menu_text_2.get_rect(center=(600, 500))
 
-helper_menu_texts = ""
-helper_menu_texts_2 = ""
-helper_menu_texts_3 = ""
-# helper_menu_texts_rect = helper_menu_texts.get_rect(center=(300, 300))
-helper_menu_ex_text = get_font(45).render("Esc for Exit", True, (0, 222, 0))
-helper_menu_ex_text_rect = helper_menu_ex_text.get_rect(center=(600, 500))
+helper_menu_texts = get_font(45).render("", True, (0, 222, 0))
+helper_menu_texts_2 = get_font(45).render("", True, (0, 222, 0))
+helper_menu_texts_3 = get_font(45).render("", True, (0, 222, 0))
+helper_menu_texts_4 = get_font(45).render("", True, (0, 222, 0))
+
+helper_menu_ex_text = get_font(45).render("Esc for Exit", True, (0, 0, 0))
+helper_menu_ex_text_rect = helper_menu_ex_text.get_rect(center=(600, 600))
+
+click_this_text = get_font(45).render("Click This ->", True, (0, 0, 0))
+click_this_text_rect = click_this_text.get_rect(topleft=(545, 0))
 
 def layout_inventory():
     global inventory_item_rects
@@ -933,23 +939,28 @@ def Inventory_system(level):
     layout_inventory()
 
 def load_helper_text_per_level(level):
-    global helper_menu_texts, helper_menu_texts_2, helper_menu_texts_3
+    global helper_menu_texts, helper_menu_texts_2, helper_menu_texts_3, helper_menu_texts_4
 
     if 1 <= level <= 4:
-        helper_menu_texts = get_font(45).render("Put the tiles ", True, (0, 222, 0))
-        helper_menu_texts_2 = get_font(45).render("in inventory ", True, (0, 222, 0))
-        helper_menu_texts_3 = get_font(45).render("to move", True, (0, 222, 0))
+        helper_menu_texts = get_font(45).render(" Put the tiles ", True, (0, 222, 0))
+        helper_menu_texts_2 = get_font(45).render(" in inventory ", True, (0, 222, 0))
+        helper_menu_texts_3 = get_font(45).render(" to move", True, (0, 222, 0))
+        helper_menu_texts_4 = get_font(45).render("", True, (0, 222, 0))
     elif 5 <= level <= 8:
-        helper_menu_texts = get_font(45).render("Put the 2, 3", True, (0, 222, 0))
+        helper_menu_texts = get_font(45).render(" Put the 2, 3", True, (0, 222, 0))
         helper_menu_texts_2 = get_font(45).render(" and 4 tiles to", True, (0, 222, 0))
-        helper_menu_texts_3 = get_font(45).render(" move much forward", True, (0, 222, 0))
+        helper_menu_texts_3 = get_font(45).render(" move much", True, (0, 222, 0))
+        helper_menu_texts_4 = get_font(45).render(" forward", True, (0, 222, 0))
     elif 9 <= level <= 12:
-        helper_menu_texts = get_font(45).render("Put the buffering", True, (0, 222, 0))
+        helper_menu_texts = get_font(45).render(" Put the buffering", True, (0, 222, 0))
         helper_menu_texts_2 = get_font(45).render(" like tiles to", True, (0, 222, 0))
         helper_menu_texts_3 = get_font(45).render(" rotate grass tiles", True, (0, 222, 0))
+        helper_menu_texts_4 = get_font(45).render("", True, (0, 222, 0))
     elif 13 <= level <= 16:
-        helper_menu_texts = get_font(45).render("Put the cannon", True, (0, 222, 0))
-        helper_menu_texts_2 = get_font(45).render(" tile to shoot water", True, (0, 222, 0))
+        helper_menu_texts = get_font(45).render(" Put the cannon", True, (0, 222, 0))
+        helper_menu_texts_2 = get_font(45).render(" tile to shoot", True, (0, 222, 0))
+        helper_menu_texts_3 = get_font(45).render(" water", True, (0, 222, 0))
+        helper_menu_texts_4 = get_font(45).render("", True, (0, 222, 0))
 
 def load_level(level):
     global placed_blocks, flag_pos, flag_rect
@@ -996,15 +1007,17 @@ def load_level(level):
         level_12_track()
     elif level == 13:
         load_level_13()
+        level_13_track()
 #leaved spaces are for tracks!!!~
     elif level == 14:
         load_level_14()
-
+        level_14_track()
     elif level == 15:
         load_level_15()
-
+        level_15_track()
     elif level == 16:
         load_level_16()
+        level_16_track()
 
     flag_rect.center = flag_pos
     load_helper_text_per_level(level)
@@ -1103,7 +1116,7 @@ def play():
                     elif selected_item_id.startswith("supplier"):
                         supplier_facing = {"supplierU":"up", "supplierD":"down", "supplierL":"left", "supplierR":"right"}.get(selected_item_id)
                         supplier_img_map = {"supplierU": water_supplier_u, "supplierD": water_supplier_d, "supplierL": water_supplier_l, "supplierR": water_supplier_r}
-                        if supplier_facing:
+                        if supplier_facing and under_grass:
                             s_img = supplier_img_map[selected_item_id]
                             s_rect = s_img.get_rect(center=event.pos)
                             placed_blocks.append((s_img, s_rect, supplier_facing))
@@ -1155,6 +1168,8 @@ def play():
         screen.blit(pause_btn, pause_btn_rect)
         screen.blit(helper_btn, helper_btn_rect)
 
+        screen.blit(click_this_text, click_this_text_rect)
+
         if paused:
             screen.blit(paused_menu, (300, 0))
             screen.blit(paused_menu_text, paused_menu_text_rect)
@@ -1164,13 +1179,11 @@ def play():
 
         if in_help_menu:
             screen.blit(helper_menu, (300, 0))
-            helper_menu_texts_rect = helper_menu_texts.get_rect(center=(100, 300))
-            helper_menu_texts_2_rect = helper_menu_texts_2.get_rect(center=(200, 300))
-            helper_menu_texts_3_rect = helper_menu_texts_3.get_rect(center=(300, 300))
-            screen.blit(helper_menu_texts ,helper_menu_texts_rect)
-            screen.blit(helper_menu_texts_2, helper_menu_texts_2_rect)
-            screen.blit(helper_menu_texts_3, helper_menu_texts_3_rect)
-            
+            screen.blit(helper_menu_texts, (400, 200))
+            screen.blit(helper_menu_texts_2, (400, 300))
+            screen.blit(helper_menu_texts_3, (400, 400))
+            screen.blit(helper_menu_texts_4, (400, 500))
+
             screen.blit(helper_menu_ex_text, helper_menu_ex_text_rect)
 #        screen.blit(text_per_menu, ())
 #        screen.blit(text_per_menu, ())
@@ -1314,9 +1327,9 @@ def main_menu():
                 if PLAY_BUTTON.CheckForInput(MENU_MOUSE_POS):
                     global current_level
                     menu_track()
-                    current_level = 13
+                    current_level = 1
                     start_and_end_sound.play()
-                    load_level(13)
+                    load_level(1)
                     play()
                 if OPTIONS_BUTTON.CheckForInput(MENU_MOUSE_POS):
                     start_and_end_sound.play()
@@ -1328,5 +1341,5 @@ def main_menu():
                     sys.exit()
         pygame.display.update()
 
-load_level(13)
+load_level(1)
 main_menu()
