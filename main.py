@@ -214,12 +214,12 @@ def draw_supplier_stream(source_rect, facing):
         start = source_rect.midright
         end = spray_stream(source_rect, facing)
 
-    pygame.draw.line(screen, (0, 100, 255), start, end, 20)
+    pygame.draw.line(display, (0, 100, 255), start, end, 20)
 
 def update_and_draw_particles():
     for particle in water_particles[:]:
         x, y, r, lifetime, dx, dy = particle
-        pygame.draw.circle(screen, (0, 150, 255), (int(x), int(y)), r)
+        pygame.draw.circle(display, (0, 150, 255), (int(x), int(y)), r)
         particle[0] += dx
         particle[1] += dy
         particle[3] -= 1
@@ -1140,7 +1140,7 @@ def play():
                                 under_grass = rect
                                 break
 
-                    if selected_item_id.startswith("rot"):
+                    if selected_item_id.startswith("rot") and under_grass:
                         try:
                             percentage = int(''.join(ch for ch in selected_item_id if ch.isdigit()))
                         except:
@@ -1165,12 +1165,22 @@ def play():
                                 current_inventory.pop(selected_item_idx)
                                 layout_inventory()
                     
-                    elif under_grass and direction:
+                    elif under_grass:
                         num = None
                         try:
                             num = int(''.join(ch for ch in selected_item_id if ch.isdigit()))
                         except:
                             num = None
+
+                            move_direction = None
+                            if selected_item_id.startswith("front"):
+                                move_direction = "front"
+                            elif selected_item_id.startswith("back"):
+                                move_direction = "back"
+                            elif selected_item_id.startswith("left"):
+                                move_direction = "left"
+                            elif selected_item_id.startswith("right"):
+                                move_direction = "right"
 
                         if num is not None:
                             place_multiplier_bridges(under_grass, direction, num)
@@ -1178,7 +1188,8 @@ def play():
                                 current_inventory.pop(selected_item_idx)
                                 layout_inventory()
                         else:
-                            connect_with_bridge(new_rect, direction)  
+                            if move_direction:
+                                connect_with_bridge(new_rect, direction)  
 
                 dragging = False
                 if 'dragged_img' in globals():
