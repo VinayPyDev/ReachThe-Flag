@@ -1297,11 +1297,15 @@ def end_screen():
 def main_menu():
     menu_track()
 
+    global flag_menu_icon
+
     while True:
         screen.fill((40, 40, 40))
         MENU_MOUSE_POS = pygame.mouse.get_pos()
         MENU_TEXT = get_font(100).render("REACH THE FLAG", True, "#ff3300")
         MENU_RECT = MENU_TEXT.get_rect(topleft=(30, 50))
+
+        # print(MENU_MOUSE_POS)
 
         CREATOR_TITLE = get_font(60).render("VinayPyDev", True, "#d3d3d3")
         CREATOR_TITLE_RECT = CREATOR_TITLE.get_rect(topleft=(800, 640))
@@ -1310,6 +1314,10 @@ def main_menu():
         OPTIONS_BUTTON = Button(image=None, pos=(230, 400), text_input="OPTIONS", font=get_font(75), base_color="#FBFF00", hovering_color="#EBEBEB")
         QUIT_BUTTON = Button(image=None, pos=(140, 550), text_input="QUIT", font=get_font(75), base_color="#FBFF00", hovering_color="#EBEBEB")
 
+        # screen.blit(flag_menu_icon, (286, 220 + 25))
+        # screen.blit(flag_menu_icon, (450, 368 + 25))
+        # screen.blit(flag_menu_icon, (265, 522 + 25))
+
         screen.blit(MENU_TEXT, MENU_RECT)
         screen.blit(CREATOR_TITLE, CREATOR_TITLE_RECT)
         MENU_MOUSE_IMG = pygame.image.load("Data/cursor3.png").convert_alpha()
@@ -1317,7 +1325,10 @@ def main_menu():
 
         for button in [PLAY_BUTTON, OPTIONS_BUTTON, QUIT_BUTTON]:
             button.ChangeColor(MENU_MOUSE_POS)
-            button.update(screen, draw_image=False)
+            button.update(screen, draw_image=False) 
+            if button.CheckForInput(MENU_MOUSE_POS):
+                flag_menu_icon_scaled = pygame.transform.scale(flag_menu_icon, (64, 64))
+                screen.blit(flag_menu_icon_scaled, (button.rect.right + 10, button.rect.centery - flag_menu_icon_scaled.get_height() // 2))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
