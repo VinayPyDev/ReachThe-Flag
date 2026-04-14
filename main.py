@@ -2,13 +2,52 @@ import pygame
 import sys
 import math
 import random
+import moderngl
+import struct
 
 pygame.init()
 width, height = 1280, 720
-screen = pygame.display.set_mode((width, height))
+screen = pygame.display.set_mode((width, height), pygame.OPENGL | pygame.DOUBLEBUF)
+display = pygame.Surface((width, height))
+ctx = moderngl.create_context()
 pygame.display.set_caption("Reach The Flag")
 clock = pygame.time.Clock()
 pygame.mouse.set_visible(False)
+
+with open("vertex.glsl") as f:
+    vertex_shader = f.read()
+
+with open("fragment.glsl") as f:
+    fragment_shader = f.read()
+
+crt_program = ctx.program(
+    vertex_shader=vertex_shader,
+    fragment_shader=fragment_shader
+)
+
+vertices = struct.pack('24f',
+    -1.0, 1.0, 0.0, 1.0,
+    -1.0, -1.0, 0.0, 0.0,
+    1.0, -1.0, 1.0, 0.0,
+    -1.0, 1.0, 0.0, 1.0,
+    1.0, -1.0, 1.0, 0.0,
+    1.0, 1.0, 1.0, 1.0,
+)
+
+vbo = ctx.buffer(vertices)
+vao = ctx.simple_vertex_array(crt_program, vbo, 'in_vert', 'in_uv')
+
+texture = ctx.texture((width, height), 3)
+texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+
+def render_crt():
+    raw = pygame.image.tostring(display, "RGB", True)
+    texture.write(raw)
+    texture.use(0)
+    crt_program['screen_texture'] = 0
+    ctx.clear()
+    vao.render()
+    pygame.display.flip()
 
 Active = 1
 Inactive = 0
@@ -291,8 +330,8 @@ class Button():
 
     def update(self, screen, draw_image=True):
         if draw_image and self.image is not None:
-            screen.blit(self.image, self.rect)
-        screen.blit(self.text, self.text_rect)
+            display.blit(self.image, self.rect)
+        display.blit(self.text, self.text_rect)
     
     def CheckForInput(self, position):
         return position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom)
@@ -1161,57 +1200,57 @@ def play():
 
         check_level_completion()
 
-        screen.blit(bg, (0, 0))
-        screen.blit(inventory_img, inventory_img_rect)
+        display.blit(bg, (0, 0))
+        display.blit(inventory_img, inventory_img_rect)
 
-        screen.blit(replay_btn, replay_btn_rect)
-        screen.blit(pause_btn, pause_btn_rect)
-        screen.blit(helper_btn, helper_btn_rect)
+        display.blit(replay_btn, replay_btn_rect)
+        display.blit(pause_btn, pause_btn_rect)
+        display.blit(helper_btn, helper_btn_rect)
 
-        screen.blit(click_this_text, click_this_text_rect)
+        display.blit(click_this_text, click_this_text_rect)
 
         if paused:
-            screen.blit(paused_menu, (300, 0))
-            screen.blit(paused_menu_text, paused_menu_text_rect)
-            screen.blit(paused_menu_text_2, paused_menu_text_2_rect)
-            pygame.display.update()
+            display.blit(paused_menu, (300, 0))
+            display.blit(paused_menu_text, paused_menu_text_rect)
+            display.blit(paused_menu_text_2, paused_menu_text_2_rect)
+            render_crt()
             continue
 
         if in_help_menu:
-            screen.blit(helper_menu, (300, 0))
-            screen.blit(helper_menu_texts, (400, 200))
-            screen.blit(helper_menu_texts_2, (400, 300))
-            screen.blit(helper_menu_texts_3, (400, 400))
-            screen.blit(helper_menu_texts_4, (400, 500))
+            display.blit(helper_menu, (300, 0))
+            display.blit(helper_menu_texts, (400, 200))
+            display.blit(helper_menu_texts_2, (400, 300))
+            display.blit(helper_menu_texts_3, (400, 400))
+            display.blit(helper_menu_texts_4, (400, 500))
 
-            screen.blit(helper_menu_ex_text, helper_menu_ex_text_rect)
-#        screen.blit(text_per_menu, ())
-#        screen.blit(text_per_menu, ())
-            pygame.display.update()
+            display.blit(helper_menu_ex_text, helper_menu_ex_text_rect)
+#        display.blit(text_per_menu, ())
+#        display.blit(text_per_menu, ())
+            render_crt()
             continue
 
         for idx, (item_id, surf) in enumerate(current_inventory):
             if idx < len(inventory_item_rects):
                 rect = inventory_item_rects[idx]
-                screen.blit(surf, rect)
+                display.blit(surf, rect)
 
         for block in placed_blocks:
             img, rect, state = block
 
             if img == grass_img:
                 if state == Active:
-                    screen.blit(grass_img, rect)
+                    display.blit(grass_img, rect)
                 else:
-                    screen.blit(Inactive_grass, rect)
+                    display.blit(Inactive_grass, rect)
 
             elif img == dry_img:
                 if state == Active:
-                    screen.blit(dry_img, rect)
+                    display.blit(dry_img, rect)
                 else:
-                    screen.blit(Inactive_dry, rect)
+                    display.blit(Inactive_dry, rect)
 
             else:
-                screen.blit(img, rect)
+                display.blit(img, rect)
 
                 supplier_facing_map = {
                     id(water_supplier_u): "up",
@@ -1232,28 +1271,28 @@ def play():
         update_and_draw_particles()
 
         if dragging and 'dragged_img' in globals() and 'dragged_rect' in globals():
-            screen.blit(globals()['dragged_img'], globals()['dragged_rect'])
+            display.blit(globals()['dragged_img'], globals()['dragged_rect'])
         
         level_text = get_font(64).render(f"Level {current_level}", True, "#161616")
-        screen.blit(level_text, (10, 0))        
+        display.blit(level_text, (10, 0))        
 
-        screen.blit(flag_img, flag_rect)
-        screen.blit(cursor, cursor_pos)
-        pygame.display.update()
+        display.blit(flag_img, flag_rect)
+        display.blit(cursor, cursor_pos)
+        render_crt()
         clock.tick(60)
 
 def options():
     while True:
-        screen.fill("black")
+        display.fill("black")
         OPTIONS_MOUSE_POS = pygame.mouse.get_pos()
         OPTIONS_TEXT = get_font(45).render("This is Made by VinayPyDev.", True, "White")
         OPTIONS_RECT = OPTIONS_TEXT.get_rect(center=(640, 260))
-        screen.blit(OPTIONS_TEXT, OPTIONS_RECT)
+        display.blit(OPTIONS_TEXT, OPTIONS_RECT)
         OPTIONS_BACK = Button(image=None, pos=(640, 460), text_input="BACK", font=get_font(75), base_color="Green", hovering_color="Green")
         OPTIONS_BACK.ChangeColor(OPTIONS_MOUSE_POS)
         OPTIONS_BACK.update(screen, draw_image=False)
         OPTIONS_MOUSE_IMG = pygame.image.load("Data/cursor3.png").convert_alpha()
-        screen.blit(OPTIONS_MOUSE_IMG, OPTIONS_MOUSE_POS)
+        display.blit(OPTIONS_MOUSE_IMG, OPTIONS_MOUSE_POS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -1262,19 +1301,19 @@ def options():
                 if OPTIONS_BACK.CheckForInput(OPTIONS_MOUSE_POS):
                     start_and_end_sound.play()
                     main_menu()
-        pygame.display.update()
+        render_crt()
 
 def end_screen():
     end_screen_flag = pygame.transform.scale(flag_img, (200, 200))
     end_screen_flag_rect = end_screen_flag.get_rect(center=(640, 360))
     while True:
-        screen.blit(bg, (0, 0))
-        screen.blit(cursor, (pygame.mouse.get_pos()))
-        screen.blit(end_screen_flag, end_screen_flag_rect)
+        display.blit(bg, (0, 0))
+        display.blit(cursor, (pygame.mouse.get_pos()))
+        display.blit(end_screen_flag, end_screen_flag_rect)
 
         END_TEXT = get_font(75).render("LEVEL COMPLETE!", True, "black")
         END_RECT = END_TEXT.get_rect(center=(640, 170))
-        screen.blit(END_TEXT, END_RECT)
+        display.blit(END_TEXT, END_RECT)
 
         BACK_TO_MENU = Button(image=None, pos=(640, 575), text_input="MENU",
                               font=get_font(75), base_color="Green", hovering_color="#84FF84")
@@ -1292,7 +1331,7 @@ def end_screen():
                     load_level_1()
                     main_menu()
                     return
-        pygame.display.update()
+        render_crt()
 
 def main_menu():
     menu_track()
@@ -1300,7 +1339,7 @@ def main_menu():
     global flag_menu_icon
 
     while True:
-        screen.fill((40, 40, 40))
+        display.fill((40, 40, 40))
         MENU_MOUSE_POS = pygame.mouse.get_pos()
         MENU_TEXT = get_font(100).render("REACH THE FLAG", True, "#ff3300")
         MENU_RECT = MENU_TEXT.get_rect(topleft=(30, 50))
@@ -1314,21 +1353,21 @@ def main_menu():
         OPTIONS_BUTTON = Button(image=None, pos=(230, 400), text_input="OPTIONS", font=get_font(75), base_color="#FBFF00", hovering_color="#EBEBEB")
         QUIT_BUTTON = Button(image=None, pos=(140, 550), text_input="QUIT", font=get_font(75), base_color="#FBFF00", hovering_color="#EBEBEB")
 
-        # screen.blit(flag_menu_icon, (286, 220 + 25))
-        # screen.blit(flag_menu_icon, (450, 368 + 25))
-        # screen.blit(flag_menu_icon, (265, 522 + 25))
+        # display.blit(flag_menu_icon, (286, 220 + 25))
+        # display.blit(flag_menu_icon, (450, 368 + 25))
+        # display.blit(flag_menu_icon, (265, 522 + 25))
 
-        screen.blit(MENU_TEXT, MENU_RECT)
-        screen.blit(CREATOR_TITLE, CREATOR_TITLE_RECT)
+        display.blit(MENU_TEXT, MENU_RECT)
+        display.blit(CREATOR_TITLE, CREATOR_TITLE_RECT)
         MENU_MOUSE_IMG = pygame.image.load("Data/cursor3.png").convert_alpha()
-        screen.blit(MENU_MOUSE_IMG, MENU_MOUSE_POS)
+        display.blit(MENU_MOUSE_IMG, MENU_MOUSE_POS)
 
         for button in [PLAY_BUTTON, OPTIONS_BUTTON, QUIT_BUTTON]:
             button.ChangeColor(MENU_MOUSE_POS)
             button.update(screen, draw_image=False) 
             if button.CheckForInput(MENU_MOUSE_POS):
                 flag_menu_icon_scaled = pygame.transform.scale(flag_menu_icon, (64, 64))
-                screen.blit(flag_menu_icon_scaled, (button.rect.right + 10, button.rect.centery - flag_menu_icon_scaled.get_height() // 2))
+                display.blit(flag_menu_icon_scaled, (button.rect.right + 10, button.rect.centery - flag_menu_icon_scaled.get_height() // 2))
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -1350,7 +1389,7 @@ def main_menu():
                     pygame.time.wait(100)
                     pygame.quit()
                     sys.exit()
-        pygame.display.update()
+        render_crt()
 
 load_level(1)
 main_menu()
